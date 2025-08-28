@@ -29,7 +29,7 @@ pub const JsonTokenType = enum {
     null,
     whitespace,
     comment,
-    error,
+    error
 };
 
 // JSON token
@@ -128,19 +128,11 @@ pub const StaticJsonParser = struct {
     source: []const u8 = undefined,
     position: usize = 0,
     nesting_depth: u8 = 0,
-    stats: Stats = .{},
-    
-    pub const Stats = struct {
-        tokens_parsed: u32 = 0,
-        parse_speed_mb_s: f64 = 0.0,
-        memory_used_bytes: usize = 0,
-        parse_time_ns: u64 = 0,
-    };
     
     pub fn init() StaticJsonParser {
-        var self = StaticJsonParser{};
-        self.token_pool = JsonTokenPool.init();
-        return self;
+        return StaticJsonParser{
+            .token_pool = JsonTokenPool.init(),
+        };
     }
     
     pub fn deinit(self: *StaticJsonParser) void {
@@ -151,40 +143,25 @@ pub const StaticJsonParser = struct {
         self.source = json_string;
         self.position = 0;
         self.nesting_depth = 0;
-        self.stats = .{};
         
-        const start_time = std.time.nanoTimestamp();
         try self.parseValue();
-        
-        const end_time = std.time.nanoTimestamp();
-        self.stats.parse_time_ns = @intCast(@intCast(u64, end_time - start_time));
-        self.stats.tokens_parsed = self.token_pool.used_count;
-        self.stats.memory_used_bytes = self.token_pool.used_count * @sizeOf(JsonToken);
-        
-        if (self.stats.parse_time_ns > 0) {
-            const bytes_per_ns = @as(f64, @floatFromInt(json_string.len)) / @as(f64, @floatFromInt(self.stats.parse_time_ns));
-            self.stats.parse_speed_mb_s = bytes_per_ns * 1000.0;
-        }
     }
     
     fn parseValue(self: *StaticJsonParser) !void {
         while (self.position < self.source.len) {
             const char = self.source[self.position];
+            
             switch (char) {
                 '{' => try self.parseObject(),
                 '[' => try self.parseArray(),
                 '"' => try self.parseString(),
-                '0'...'9', '-', '+' => try self.parseNumber(),
+                '0'...'9', '-' => try self.parseNumber(),
                 't' => try self.parseTrue(),
                 'f' => try self.parseFalse(),
                 'n' => try self.parseNull(),
-                ' ', '\t', '\n', '\r' => {
-                    self.position += 1;
-                    continue;
-                },
+                ' ', '\t', '\n', '\r' => self.position += 1,
                 else => return error.UnexpectedCharacter,
             }
-            break;
         }
     }
     
@@ -192,191 +169,193 @@ pub const StaticJsonParser = struct {
         if (self.nesting_depth >= json_config.max_nesting_depth) {
             return error.NestingTooDeep;
         }
-        self.nesting_depth += 1;
-        defer self.nesting_depth -= 1;
         
         const token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
         const token = self.token_pool.getMut(token_idx).?;
-        token.* = JsonToken.init(.object_start, @intCast(self.position), @intCast(self.position));
+        token.* = JsonToken.init(.object_start, @as(u32, self.position), @as(u32, self.position));
         
         self.position += 1;
+        self.nesting_depth += 1;
         
         while (self.position < self.source.len) {
             const char = self.source[self.position];
             if (char == '}') {
                 const end_token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
                 const end_token = self.token_pool.getMut(end_token_idx).?;
-                end_token.* = JsonToken.init(.object_end, @intCast(self.position), @intCast(self.position));
-                self.position += 1;
+                end_token.* = JsonToken.init(.object_end, @as(u32, self.position), @as(u32, self.position));
                 break;
             }
-            try self.parseKeyValue();
-            if (self.position < self.source.len and self.source[self.position] == ',') {
+            
+            if (char == ',') {
                 const comma_token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
                 const comma_token = self.token_pool.getMut(comma_token_idx).?;
-                comma_token.* = JsonToken.init(.comma, @intCast(self.position), @intCast(self.position));
-                self.position += 1;
+                comma_token.* = JsonToken.init(.comma, @as(u32, self.position), @as(u32, self.position));
             }
+            
+            if (char == ':') {
+                const colon_token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
+                const colon_token = self.token_pool.getMut(colon_token_idx).?;
+                colon_token.* = JsonToken.init(.colon, @as(u32, self.position), @as(u32, self.position));
+            }
+            
+            self.position += 1;
         }
-    }
-    
-    fn parseKeyValue(self: *StaticJsonParser) !void {
-        try self.parseString();
-        if (self.position >= self.source.len or self.source[self.position] != ':') {
-            return error.ExpectedColon;
+        
+        if (self.nesting_depth > 0) {
+            self.nesting_depth -= 1;
         }
-        const colon_token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
-        const colon_token = self.token_pool.getMut(colon_token_idx).?;
-        colon_token.* = JsonToken.init(.colon, @intCast(self.position), @intCast(self.position));
-        self.position += 1;
-        try self.parseValue();
     }
     
     fn parseArray(self: *StaticJsonParser) !void {
         if (self.nesting_depth >= json_config.max_nesting_depth) {
             return error.NestingTooDeep;
         }
-        self.nesting_depth += 1;
-        defer self.nesting_depth -= 1;
         
         const token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
         const token = self.token_pool.getMut(token_idx).?;
-        token.* = JsonToken.init(.array_start, @intCast(self.position), @intCast(self.position));
+        token.* = JsonToken.init(.array_start, @as(u32, self.position), @as(u32, self.position));
         
         self.position += 1;
+        self.nesting_depth += 1;
         
         while (self.position < self.source.len) {
             const char = self.source[self.position];
             if (char == ']') {
                 const end_token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
                 const end_token = self.token_pool.getMut(end_token_idx).?;
-                end_token.* = JsonToken.init(.array_end, @intCast(self.position), @intCast(self.position));
-                self.position += 1;
+                end_token.* = JsonToken.init(.array_end, @as(u32, self.position), @as(u32, self.position));
                 break;
             }
-            try self.parseValue();
-            if (self.position < self.source.len and self.source[self.position] == ',') {
+            
+            if (char == ',') {
                 const comma_token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
                 const comma_token = self.token_pool.getMut(comma_token_idx).?;
-                comma_token.* = JsonToken.init(.comma, @intCast(self.position), @intCast(self.position));
-                self.position += 1;
+                comma_token.* = JsonToken.init(.comma, @as(u32, self.position), @as(u32, self.position));
             }
+            
+            self.position += 1;
+        }
+        
+        if (self.nesting_depth > 0) {
+            self.nesting_depth -= 1;
         }
     }
     
     fn parseString(self: *StaticJsonParser) !void {
-        if (self.position >= self.source.len or self.source[self.position] != '"') {
+        if (self.position >= self.source.len) {
             return error.ExpectedString;
         }
+        
+        const token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
+        const token = self.token_pool.getMut(token_idx).?;
         const start_pos = self.position;
-        self.position += 1;
+        
+        self.position += 1; // Skip opening quote
         
         while (self.position < self.source.len) {
             const char = self.source[self.position];
             if (char == '"') {
-                const token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
-                const token = self.token_pool.getMut(token_idx).?;
-                token.* = JsonToken.init(.string, @intCast(start_pos), @intCast(self.position));
-                const string_content = self.source[start_pos + 1..self.position];
-                token.setString(string_content);
-                self.position += 1;
                 break;
-            } else if (char == '\\') {
-                self.position += 2;
+            }
+            if (char == '\\') {
+                self.position += 2; // Skip escaped character
             } else {
                 self.position += 1;
             }
         }
+        
+        token.* = JsonToken.init(.string, @as(u32, start_pos), @as(u32, self.position));
     }
     
     fn parseNumber(self: *StaticJsonParser) !void {
-        const start_pos = self.position;
-        if (self.position < self.source.len and (self.source[self.position] == '-' or self.source[self.position] == '+')) {
-            self.position += 1;
-        }
-        while (self.position < self.source.len and self.source[self.position] >= '0' and self.source[self.position] <= '9') {
-            self.position += 1;
-        }
-        if (self.position < self.source.len and self.source[self.position] == '.') {
-            self.position += 1;
-            while (self.position < self.source.len and self.source[self.position] >= '0' and self.source[self.position] <= '9') {
-                self.position += 1;
-            }
-        }
-        if (self.position < self.source.len and (self.source[self.position] == 'e' or self.source[self.position] == 'E')) {
-            self.position += 1;
-            if (self.position < self.source.len and (self.source[self.position] == '+' or self.source[self.position] == '-')) {
-                self.position += 1;
-            }
-            while (self.position < self.source.len and self.source[self.position] >= '0' and self.source[self.position] <= '9') {
-                self.position += 1;
-            }
-        }
-        
         const token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
         const token = self.token_pool.getMut(token_idx).?;
-        token.* = JsonToken.init(.number, @intCast(start_pos), @intCast(self.position));
+        const start_pos = self.position;
         
-        const number_str = self.source[start_pos..self.position];
-        const number_value = std.fmt.parseFloat(f64, number_str) catch 0.0;
-        token.setNumber(number_value);
+        while (self.position < self.source.len) {
+            const char = self.source[self.position];
+            if (char == ',' or char == '}' or char == ']' or char == ' ' or char == '\t' or char == '\n' or char == '\r') {
+                break;
+            }
+            self.position += 1;
+        }
+        
+        token.* = JsonToken.init(.number, @as(u32, start_pos), @as(u32, self.position));
     }
     
     fn parseTrue(self: *StaticJsonParser) !void {
-        if (self.position + 3 >= self.source.len or 
-            self.source[self.position] != 't' or
-            self.source[self.position + 1] != 'r' or
-            self.source[self.position + 2] != 'u' or
-            self.source[self.position + 3] != 'e') {
+        if (self.position + 3 >= self.source.len) {
             return error.ExpectedTrue;
         }
+        
         const token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
         const token = self.token_pool.getMut(token_idx).?;
-        token.* = JsonToken.init(.boolean_true, @intCast(self.position), @intCast(self.position + 3));
-        token.setBoolean(true);
-        self.position += 4;
+        const start_pos = self.position;
+        
+        if (std.mem.eql(u8, self.source[self.position..self.position + 4], "true")) {
+            self.position += 4;
+            token.* = JsonToken.init(.boolean_true, @as(u32, start_pos), @as(u32, self.position));
+        } else {
+            return error.ExpectedTrue;
+        }
     }
     
     fn parseFalse(self: *StaticJsonParser) !void {
-        if (self.position + 4 >= self.source.len or 
-            self.source[self.position] != 'f' or
-            self.source[self.position + 1] != 'a' or
-            self.source[self.position + 2] != 'l' or
-            self.source[self.position + 3] != 's' or
-            self.source[self.position + 4] != 'e') {
+        if (self.position + 4 >= self.source.len) {
             return error.ExpectedFalse;
         }
+        
         const token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
         const token = self.token_pool.getMut(token_idx).?;
-        token.* = JsonToken.init(.boolean_false, @intCast(self.position), @intCast(self.position + 4));
-        token.setBoolean(false);
-        self.position += 5;
+        const start_pos = self.position;
+        
+        if (std.mem.eql(u8, self.source[self.position..self.position + 5], "false")) {
+            self.position += 5;
+            token.* = JsonToken.init(.boolean_false, @as(u32, start_pos), @as(u32, self.position));
+        } else {
+            return error.ExpectedFalse;
+        }
     }
     
     fn parseNull(self: *StaticJsonParser) !void {
-        if (self.position + 3 >= self.source.len or 
-            self.source[self.position] != 'n' or
-            self.source[self.position + 1] != 'u' or
-            self.source[self.position + 2] != 'l' or
-            self.source[self.position + 3] != 'l') {
+        if (self.position + 3 >= self.source.len) {
             return error.ExpectedNull;
         }
+        
         const token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
         const token = self.token_pool.getMut(token_idx).?;
-        token.* = JsonToken.init(.null, @intCast(self.position), @intCast(self.position + 3));
-        self.position += 4;
+        const start_pos = self.position;
+        
+        if (std.mem.eql(u8, self.source[self.position..self.position + 4], "null")) {
+            self.position += 4;
+            token.* = JsonToken.init(.null, @as(u32, start_pos), @as(u32, self.position));
+        } else {
+            return error.ExpectedNull;
+        }
     }
     
     pub fn getStats(self: *const StaticJsonParser) Stats {
-        return self.stats;
+        return Stats{
+            .tokens_allocated = self.token_pool.used_count,
+            .nesting_depth = self.nesting_depth,
+            .position = self.position,
+            .source_length = self.source.len,
+        };
     }
+    
+    pub const Stats = struct {
+        tokens_allocated: u32,
+        nesting_depth: u8,
+        position: usize,
+        source_length: usize,
+    };
 };
 
 // Error types
 pub const JsonError = error{
-    TokenPoolExhausted,
-    NestingTooDeep,
     UnexpectedCharacter,
+    NestingTooDeep,
+    TokenPoolExhausted,
     ExpectedString,
     ExpectedColon,
     ExpectedTrue,

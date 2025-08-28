@@ -8,6 +8,9 @@ pub const static_json = @import("static_json.zig");
 // High-level JSON API
 pub const json_api = @import("json_api.zig");
 
+// IO integration using existing nendb IO library
+pub const io = @import("io_integration.zig");
+
 // Re-export main types for convenience
 pub const JsonValue = json_api.JsonValue;
 pub const JsonObject = json_api.JsonObject;
@@ -15,6 +18,10 @@ pub const JsonArray = json_api.JsonArray;
 pub const JsonParser = json_api.JsonParser;
 pub const JsonBuilder = json_api.JsonBuilder;
 pub const JsonSerializer = json_api.JsonSerializer;
+
+// Re-export IO types
+pub const JsonFile = io.JsonFile;
+pub const StreamingJsonParser = io.StreamingJsonParser;
 
 // Configuration and constants
 pub const json_config = static_json.json_config;
@@ -98,9 +105,50 @@ pub const json = struct {
     }
 };
 
+// IO convenience functions using nen-io library
+pub const io_utils = struct {
+    /// Read JSON from file
+    pub inline fn readJson(path: []const u8) ![]const u8 {
+        return JsonFile.readJson(path);
+    }
+    
+    /// Write JSON to file
+    pub inline fn writeJson(path: []const u8, content: []const u8) !void {
+        try JsonFile.writeJson(path, content);
+    }
+    
+    /// Validate JSON file
+    pub inline fn validateJson(path: []const u8) !void {
+        try JsonFile.validateJson(path);
+    }
+    
+    /// Get file statistics
+    pub inline fn getFileStats(path: []const u8) !nen_io.FileStats {
+        return JsonFile.getFileStats(path);
+    }
+    
+    /// Check if file is readable
+    pub inline fn isReadable(path: []const u8) bool {
+        return JsonFile.isReadable(path);
+    }
+    
+    /// Get file size
+    pub inline fn getFileSize(path: []const u8) !u64 {
+        return JsonFile.getFileSize(path);
+    }
+    
+    /// Create streaming parser for large files
+    pub inline fn createStreamingParser() StreamingJsonParser {
+        return StreamingJsonParser.init();
+    }
+    
+    /// Direct access to nen-io functionality
+    pub const nen_io = io.nen_io;
+};
+
 // Version information
 pub const VERSION = "0.1.0";
-    pub const VERSION_STRING = "Nen JSON v" ++ VERSION;
+pub const VERSION_STRING = "Nen JSON v" ++ VERSION;
 
 // Feature flags
 pub const FEATURES = struct {
@@ -109,9 +157,10 @@ pub const FEATURES = struct {
     pub const cache_aligned = true;        // Cache-line optimized
     pub const inline_functions = true;     // Critical operations are inline
     pub const zero_copy = true;            // Minimize memory copying
-    pub const streaming = false;           // TODO: Streaming support for large files
+    pub const streaming = true;            // Streaming support for large files
     pub const unicode = false;             // TODO: Full Unicode support
     pub const schema_validation = false;   // TODO: JSON Schema validation
+    pub const nendb_io_integration = true; // Uses existing nendb IO library
 };
 
 // Performance targets
