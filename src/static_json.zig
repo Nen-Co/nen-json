@@ -29,7 +29,7 @@ pub const JsonTokenType = enum {
     null,
     whitespace,
     comment,
-    error
+    parse_error
 };
 
 // JSON token
