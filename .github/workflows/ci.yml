@@ -185,7 +185,18 @@ jobs:
       - name: Check formatting
         run: |
           set -euo pipefail
-          zig fmt --check src/ examples/ tests/
+          # Check formatting only on directories with actual Zig files
+          zig fmt --check src/
+          # Check tests directory if it contains Zig files
+          if [ -f tests/unit/json_tests.zig ]; then
+            zig fmt --check tests/
+          fi
+          # Skip examples directory if it's empty
+          if [ "$(ls -A examples/ 2>/dev/null)" ]; then
+            zig fmt --check examples/
+          else
+            echo "Examples directory is empty, skipping format check"
+          fi
 
       - name: Check for unused variables
         run: |
