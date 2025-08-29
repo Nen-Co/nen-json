@@ -11,27 +11,27 @@ pub const JsonFile = struct {
     pub inline fn readJson(path: []const u8) ![]const u8 {
         return nen_io.readJson(path);
     }
-    
+
     // Write JSON to file using nen-io
     pub inline fn writeJson(path: []const u8, content: []const u8) !void {
         try nen_io.writeJson(path, content);
     }
-    
+
     // Validate JSON file using nen-io
     pub inline fn validateJson(path: []const u8) !void {
         try nen_io.validateJson(path);
     }
-    
+
     // Get file statistics using nen-io
     pub inline fn getFileStats(path: []const u8) !nen_io.FileStats {
         return nen_io.getFileStats(path);
     }
-    
+
     // Check if file is readable using nen-io
     pub inline fn isReadable(path: []const u8) bool {
         return nen_io.isReadable(path);
     }
-    
+
     // Get file size using nen-io
     pub inline fn getFileSize(path: []const u8) !u64 {
         return nen_io.getFileSize(path);
@@ -42,25 +42,25 @@ pub const JsonFile = struct {
 pub const StreamingJsonParser = struct {
     // Just wrap the nen-io streaming parser
     parser: nen_io.StreamingJsonParser = undefined,
-    
+
     pub inline fn init() @This() {
         return @This(){
             .parser = nen_io.StreamingJsonParser.init(),
         };
     }
-    
+
     pub inline fn openFile(self: *@This(), path: []const u8) !void {
         try self.parser.openFile(path);
     }
-    
+
     pub inline fn parseFile(self: *@This()) !void {
         try self.parser.parseFile();
     }
-    
+
     pub inline fn getStats(self: @This()) nen_io.StreamingJsonParser.Stats {
         return self.parser.getStats();
     }
-    
+
     pub inline fn deinit(self: *@This()) void {
         self.parser.deinit();
     }
