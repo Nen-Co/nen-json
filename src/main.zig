@@ -29,7 +29,7 @@ fn demoBasicParsing() !void {
     const json_str = "{\"name\":\"John Doe\",\"age\":30,\"active\":true,\"tags\":[\"developer\",\"zig\"]}";
     std.debug.print("  Parsing: {s}\n", .{json_str});
 
-    const value = try json.parse(json_str);
+    const value = try json.json.parse(json_str);
 
     // Access object properties
     const obj = value.getObject().?;
@@ -77,7 +77,7 @@ fn demoJsonBuilding() !void {
     std.debug.print("  Built JSON: {s}\n", .{json_str});
 
     // Parse it back to verify
-    const parsed = try json.parse(json_str);
+    const parsed = try json.json.parse(json_str);
     const parsed_profile = parsed.getObject().?;
     const parsed_user = parsed_profile.get("user").?.getObject().?;
 
@@ -95,12 +95,12 @@ fn demoPerformance() !void {
 
     var i: usize = 0;
     while (i < 1000) : (i += 1) {
-        const value = try json.parse(test_json);
+        const value = try json.json.parse(test_json);
         _ = value;
     }
 
     const end_time = std.time.nanoTimestamp();
-    const duration_ns = @intCast(u64, end_time - start_time);
+    const duration_ns = @as(u64, @intCast(end_time - start_time));
     const duration_ms = duration_ns / 1_000_000;
 
     std.debug.print("  Parsed 1000 JSONs in {d}ms\n", .{duration_ms});
@@ -129,7 +129,7 @@ fn demoErrorHandling() !void {
     for (invalid_jsons, 0..) |invalid_json, i| {
         std.debug.print("  Test {d}: {s}\n", .{ i + 1, invalid_json });
 
-        const result = json.parse(invalid_json);
+        const result = json.json.parse(invalid_json);
         if (result) |_| {
             std.debug.print("    ❌ Unexpected success\n", .{});
         } else |err| {
