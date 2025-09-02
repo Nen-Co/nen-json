@@ -72,7 +72,7 @@ pub const JsonTokenPool = struct {
     pub fn init() JsonTokenPool {
         var self = JsonTokenPool{};
         for (self.free_list[0..json_config.max_tokens], 0..) |*slot, i| {
-            slot.* = @as(u32, i);
+            slot.* = @as(u32, @intCast(i));
         }
         return self;
     }
@@ -157,7 +157,7 @@ pub const StaticJsonParser = struct {
 
         const token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
         const token = self.token_pool.getMut(token_idx).?;
-        token.* = JsonToken.init(.object_start, @as(u32, self.position), @as(u32, self.position));
+        token.* = JsonToken.init(.object_start, @as(u32, @intCast(self.position)), @as(u32, @intCast(self.position)));
 
         self.position += 1;
         self.nesting_depth += 1;
@@ -167,20 +167,20 @@ pub const StaticJsonParser = struct {
             if (char == '}') {
                 const end_token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
                 const end_token = self.token_pool.getMut(end_token_idx).?;
-                end_token.* = JsonToken.init(.object_end, @as(u32, self.position), @as(u32, self.position));
+                end_token.* = JsonToken.init(.object_end, @as(u32, @intCast(self.position)), @as(u32, @intCast(self.position)));
                 break;
             }
 
             if (char == ',') {
                 const comma_token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
                 const comma_token = self.token_pool.getMut(comma_token_idx).?;
-                comma_token.* = JsonToken.init(.comma, @as(u32, self.position), @as(u32, self.position));
+                comma_token.* = JsonToken.init(.comma, @as(u32, @intCast(self.position)), @as(u32, @intCast(self.position)));
             }
 
             if (char == ':') {
                 const colon_token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
                 const colon_token = self.token_pool.getMut(colon_token_idx).?;
-                colon_token.* = JsonToken.init(.colon, @as(u32, self.position), @as(u32, self.position));
+                colon_token.* = JsonToken.init(.colon, @as(u32, @intCast(self.position)), @as(u32, @intCast(self.position)));
             }
 
             self.position += 1;
@@ -198,7 +198,7 @@ pub const StaticJsonParser = struct {
 
         const token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
         const token = self.token_pool.getMut(token_idx).?;
-        token.* = JsonToken.init(.array_start, @as(u32, self.position), @as(u32, self.position));
+        token.* = JsonToken.init(.array_start, @as(u32, @intCast(self.position)), @as(u32, @intCast(self.position)));
 
         self.position += 1;
         self.nesting_depth += 1;
@@ -208,14 +208,14 @@ pub const StaticJsonParser = struct {
             if (char == ']') {
                 const end_token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
                 const end_token = self.token_pool.getMut(end_token_idx).?;
-                end_token.* = JsonToken.init(.array_end, @as(u32, self.position), @as(u32, self.position));
+                end_token.* = JsonToken.init(.array_end, @as(u32, @intCast(self.position)), @as(u32, @intCast(self.position)));
                 break;
             }
 
             if (char == ',') {
                 const comma_token_idx = self.token_pool.alloc() orelse return error.TokenPoolExhausted;
                 const comma_token = self.token_pool.getMut(comma_token_idx).?;
-                comma_token.* = JsonToken.init(.comma, @as(u32, self.position), @as(u32, self.position));
+                comma_token.* = JsonToken.init(.comma, @as(u32, @intCast(self.position)), @as(u32, @intCast(self.position)));
             }
 
             self.position += 1;
@@ -249,7 +249,7 @@ pub const StaticJsonParser = struct {
             }
         }
 
-        token.* = JsonToken.init(.string, @as(u32, start_pos), @as(u32, self.position));
+        token.* = JsonToken.init(.string, @as(u32, @intCast(start_pos)), @as(u32, @intCast(self.position)));
     }
 
     fn parseNumber(self: *StaticJsonParser) !void {
@@ -265,7 +265,7 @@ pub const StaticJsonParser = struct {
             self.position += 1;
         }
 
-        token.* = JsonToken.init(.number, @as(u32, start_pos), @as(u32, self.position));
+        token.* = JsonToken.init(.number, @as(u32, @intCast(start_pos)), @as(u32, @intCast(self.position)));
     }
 
     fn parseTrue(self: *StaticJsonParser) !void {
@@ -279,7 +279,7 @@ pub const StaticJsonParser = struct {
 
         if (std.mem.eql(u8, self.source[self.position .. self.position + 4], "true")) {
             self.position += 4;
-            token.* = JsonToken.init(.boolean_true, @as(u32, start_pos), @as(u32, self.position));
+            token.* = JsonToken.init(.boolean_true, @as(u32, @intCast(start_pos)), @as(u32, @intCast(self.position)));
         } else {
             return error.ExpectedTrue;
         }
@@ -296,7 +296,7 @@ pub const StaticJsonParser = struct {
 
         if (std.mem.eql(u8, self.source[self.position .. self.position + 5], "false")) {
             self.position += 5;
-            token.* = JsonToken.init(.boolean_false, @as(u32, start_pos), @as(u32, self.position));
+            token.* = JsonToken.init(.boolean_false, @as(u32, @intCast(start_pos)), @as(u32, @intCast(self.position)));
         } else {
             return error.ExpectedFalse;
         }
@@ -313,7 +313,7 @@ pub const StaticJsonParser = struct {
 
         if (std.mem.eql(u8, self.source[self.position .. self.position + 4], "null")) {
             self.position += 4;
-            token.* = JsonToken.init(.null, @as(u32, start_pos), @as(u32, self.position));
+            token.* = JsonToken.init(.null, @as(u32, @intCast(start_pos)), @as(u32, @intCast(self.position)));
         } else {
             return error.ExpectedNull;
         }

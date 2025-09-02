@@ -9,23 +9,37 @@ const json_constants = struct {
     pub const node_props_size = 128; // Default property size
 };
 
-// JSON value types that can be stored in graph properties
+// Simple JSON value types without circular dependency
 pub const JsonValue = union(enum) {
     string: []const u8,
     number: f64,
     boolean: bool,
     null: void,
-    object: JsonObject,
-    array: JsonArray,
-
+    // Use simple structs instead of complex objects to avoid circular dependency
+    object: struct {
+        keys: [static_json.json_config.max_object_keys][]const u8 = undefined,
+        value_strings: [static_json.json_config.max_object_keys][]const u8 = undefined,
+        value_numbers: [static_json.json_config.max_object_keys]f64 = undefined,
+        value_booleans: [static_json.json_config.max_object_keys]bool = undefined,
+        value_types: [static_json.json_config.max_object_keys]u8 = undefined, // 0=string, 1=number, 2=boolean, 3=null
+        count: u16 = 0,
+    },
+    array: struct {
+        value_strings: [static_json.json_config.max_array_elements][]const u8 = undefined,
+        value_numbers: [static_json.json_config.max_array_elements]f64 = undefined,
+        value_booleans: [static_json.json_config.max_array_elements]bool = undefined,
+        value_types: [static_json.json_config.max_array_elements]u8 = undefined, // 0=string, 1=number, 2=boolean, 3=null
+        count: u16 = 0,
+    },
+    
     pub inline fn deinit(self: *JsonValue) void {
         switch (self.*) {
             .string => {}, // No allocation to free
             .number => {},
             .boolean => {},
             .null => {},
-            .object => self.object.deinit(),
-            .array => self.array.deinit(),
+            .object => {}, // Object data is handled separately
+            .array => {},  // Array data is handled separately
         }
     }
 
@@ -310,7 +324,7 @@ pub const JsonParser = struct {
     }
 
     // Convert parsed tokens to JsonValue
-    inline fn tokensToValue(self: *Self, start_token: u32) !JsonValue {
+    fn tokensToValue(self: *Self, start_token: u32) JsonApiError!JsonValue {
         const token = self.parser.token_pool.get(start_token) orelse {
             return error.InvalidToken;
         };
@@ -328,7 +342,7 @@ pub const JsonParser = struct {
     }
 
     // Parse object from tokens
-    inline fn parseObject(self: *Self, start_token: u32) !JsonValue {
+    fn parseObject(self: *Self, start_token: u32) JsonApiError!JsonValue {
         var obj = JsonObject.init();
         var current_token = start_token;
 
@@ -374,7 +388,7 @@ pub const JsonParser = struct {
     }
 
     // Parse array from tokens
-    inline fn parseArray(self: *Self, start_token: u32) !JsonValue {
+    fn parseArray(self: *Self, start_token: u32) JsonApiError!JsonValue {
         var arr = JsonArray.init();
         var current_token = start_token;
 
