@@ -1,24 +1,23 @@
-// Nen JSON Library - Simple Demo
-// Basic demonstration of JSON functionality
+// Basic Usage Example for Nen JSON Library
+// Simple demonstration for CI compatibility
 
 const std = @import("std");
-const json = @import("lib.zig");
+const json = @import("nen-json");
 
 pub fn main() !void {
-    std.debug.print("🚀 Nen JSON Library v{s}\n", .{json.VERSION_STRING});
-    std.debug.print("Features: Static Memory, SIMD Optimized, Zero Allocation\n\n", .{});
+    std.debug.print("=== Nen JSON Library Basic Usage Example ===\n\n", .{});
 
-    // Demo 1: Basic JSON parsing
-    try demoBasicParsing();
+    // Example 1: Parse simple JSON
+    try exampleParseSimple();
 
-    // Demo 2: JSON building
-    try demoJsonBuilding();
+    // Example 2: JSON building
+    try exampleJsonBuilding();
 
-    std.debug.print("\n🎉 All demos completed successfully!\n", .{});
+    std.debug.print("\n=== All examples completed successfully! ===\n", .{});
 }
 
-fn demoBasicParsing() !void {
-    std.debug.print("📝 Demo 1: Basic JSON Parsing\n", .{});
+fn exampleParseSimple() !void {
+    std.debug.print("1. Parsing Simple JSON:\n", .{});
 
     const json_str = "{\"name\":\"John Doe\",\"age\":30}";
     std.debug.print("  Parsing: {s}\n", .{json_str});
@@ -28,8 +27,8 @@ fn demoBasicParsing() !void {
     std.debug.print("  ✅ Basic parsing demo completed\n\n", .{});
 }
 
-fn demoJsonBuilding() !void {
-    std.debug.print("🔨 Demo 2: JSON Building\n", .{});
+fn exampleJsonBuilding() !void {
+    std.debug.print("2. JSON Building:\n", .{});
 
     // Build a simple JSON structure
     var user = json.json.object();

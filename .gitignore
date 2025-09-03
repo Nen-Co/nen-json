@@ -38,3 +38,4 @@ test.zig
 # Build artifacts
 build/
 dist/
+.zig-cache/
