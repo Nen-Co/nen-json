@@ -31,7 +31,7 @@ pub const JsonValue = union(enum) {
         value_types: [static_json.json_config.max_array_elements]u8 = undefined, // 0=string, 1=number, 2=boolean, 3=null
         count: u16 = 0,
     },
-    
+
     pub inline fn deinit(self: *JsonValue) void {
         switch (self.*) {
             .string => {}, // No allocation to free
@@ -39,7 +39,7 @@ pub const JsonValue = union(enum) {
             .boolean => {},
             .null => {},
             .object => {}, // Object data is handled separately
-            .array => {},  // Array data is handled separately
+            .array => {}, // Array data is handled separately
         }
     }
 
