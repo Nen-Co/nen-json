@@ -1,9 +1,44 @@
-// Nen JSON Library - Minimal Working Implementation
-// Simple JSON library for CI compatibility
+// Nen JSON Library - Data-Oriented Design Implementation
+// High-performance JSON parsing with SoA layouts and SIMD optimization
 
 const std = @import("std");
 
-// Simple JSON value type
+// DOD modules
+pub const dod_config = @import("dod_config.zig");
+pub const dod_layout = @import("dod_layout.zig");
+pub const simd_json = @import("simd_json.zig");
+
+// Legacy modules for compatibility
+pub const json_api = @import("json_api.zig");
+pub const static_json = @import("static_json.zig");
+
+// Re-export main DOD types
+pub const DODJSONLayout = dod_layout.DODJSONLayout;
+pub const SIMDJSONProcessor = simd_json.SIMDJSONProcessor;
+pub const DODJSONParser = simd_json.DODJSONParser;
+
+// Re-export configuration
+pub const JsonTokenType = dod_config.JsonTokenType;
+pub const JsonValueType = dod_config.JsonValueType;
+pub const DOD_CONSTANTS = dod_config.DOD_CONSTANTS;
+
+// Convenience functions using DOD
+pub inline fn parse_json_string(json_string: []const u8) !DODJSONLayout {
+    var layout = dod_layout.DODJSONLayout.init();
+    var parser = simd_json.DODJSONParser.init(&layout);
+    try parser.parse(json_string);
+    return layout;
+}
+
+pub inline fn get_global_layout() *DODJSONLayout {
+    return dod_layout.get_global_layout();
+}
+
+pub inline fn get_global_processor() *SIMDJSONProcessor {
+    return simd_json.get_global_processor();
+}
+
+// Legacy compatibility types (deprecated - use DOD versions)
 pub const JsonValue = union(enum) {
     string: []const u8,
     number: f64,
