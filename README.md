@@ -110,6 +110,42 @@ try json.io.writeJson("output.json", json_value);
 try json.io.validateJson("data.json");
 ```
 
+### HTTP Integration with nen-net
+
+```zig
+const net = @import("nen-net");
+
+// Create HTTP server
+var server = net.HttpServer.init(.{
+    .port = 8080,
+    .max_connections = 1000,
+});
+
+// Add JSON API route
+try server.addRoute(.GET, "/api/users", handleUsers);
+
+// Route handler with JSON response
+fn handleUsers(request: *net.HttpRequest, response: *net.HttpResponse) void {
+    // Create JSON response
+    const users = net.json.object()
+        .set("users", net.json.array()
+            .append(net.json.object()
+                .set("id", net.json.number(1))
+                .set("name", net.json.string("Alice"))
+                .set("email", net.json.string("alice@example.com"))
+            )
+            .append(net.json.object()
+                .set("id", net.json.number(2))
+                .set("name", net.json.string("Bob"))
+                .set("email", net.json.string("bob@example.com"))
+            )
+        );
+    
+    // Set JSON response with proper headers
+    response.setJsonObject(users) catch return;
+}
+```
+
 ## 🏗️ Architecture
 
 ### Core Components
